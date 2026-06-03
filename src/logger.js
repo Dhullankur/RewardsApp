@@ -1,25 +1,34 @@
-const logs = []
+const logs = [];
 
 export const logger = {
   error(message, meta = {}) {
     logs.push({
-      level: 'error',
+      level: "error",
       message,
       meta,
       timestamp: new Date().toISOString(),
-    })
+    });
   },
 
   info(message, meta = {}) {
     logs.push({
-      level: 'info',
+      level: "info",
       message,
       meta,
       timestamp: new Date().toISOString(),
-    })
+    });
+  },
+
+  warn(message, meta = {}) {
+    logs.push({
+      level: "warn",
+      message,
+      meta,
+      timestamp: new Date().toISOString(),
+    });
   },
 
   getLogs() {
-    return [...logs]
+    return [...logs];
   },
-}
+};

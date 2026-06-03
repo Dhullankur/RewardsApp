@@ -1,9 +1,11 @@
-import PropTypes from 'prop-types'
+import PropTypes from "prop-types";
 
 function ErrorFallback({ onReset }) {
   return (
     <div className="mx-auto mt-10 max-w-xl rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-red-700">Something went wrong</h2>
+      <h2 className="text-xl font-semibold text-red-700">
+        Something went wrong
+      </h2>
       <p className="mt-2 text-sm text-red-700">
         An unexpected error occurred. Please try again.
       </p>
@@ -15,11 +17,11 @@ function ErrorFallback({ onReset }) {
         Reload app
       </button>
     </div>
-  )
+  );
 }
 
 ErrorFallback.propTypes = {
   onReset: PropTypes.func.isRequired,
-}
+};
 
-export default ErrorFallback
+export default ErrorFallback;

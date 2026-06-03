@@ -1,68 +1,68 @@
-import { useCallback, useEffect, useState } from 'react'
-import DynamicTable from './components/DynamicTable'
-import ErrorState from './components/ErrorState'
-import LoadingState from './components/LoadingState'
-import Pagination from './components/Pagination'
-import { fetchTransactions } from './api'
-import { createRewardsReport, getPageRows } from './rewards'
-import { logger } from './logger'
+import { useCallback, useEffect, useState } from "react";
+import DynamicTable from "./components/DynamicTable";
+import ErrorState from "./components/ErrorState";
+import LoadingState from "./components/LoadingState";
+import Pagination from "./components/Pagination";
+import { fetchTransactions } from "./api";
+import { createRewardsReport, getPageRows } from "./rewards";
+import { logger } from "./logger";
 
 const INITIAL_DATA = {
   monthlyRewardsTable: [],
   totalRewardsTable: [],
   transactionsTable: [],
-}
+};
 
-const TRANSACTIONS_PAGE_SIZE = 5
+const TRANSACTIONS_PAGE_SIZE = 5;
 
 function App() {
   const [appState, setAppState] = useState({
-    status: 'loading',
-    errorMessage: '',
+    status: "loading",
+    errorMessage: "",
     data: INITIAL_DATA,
-  })
-  const [transactionPage, setTransactionPage] = useState(1)
+  });
+  const [transactionPage, setTransactionPage] = useState(1);
 
   const loadTransactions = useCallback(async () => {
     setAppState((previousState) => ({
       ...previousState,
-      status: 'loading',
-      errorMessage: '',
-    }))
+      status: "loading",
+      errorMessage: "",
+    }));
 
     try {
-      const transactions = await fetchTransactions()
-      const report = createRewardsReport(transactions)
+      const transactions = await fetchTransactions();
+      const report = createRewardsReport(transactions);
 
-      setTransactionPage(1)
+      setTransactionPage(1);
       setAppState({
-        status: 'success',
-        errorMessage: '',
+        status: "success",
+        errorMessage: "",
         data: report,
-      })
+      });
     } catch (error) {
-      logger.error('Data loading failed', { message: error.message })
+      logger.error("Data loading failed", { message: error.message });
 
       setAppState((previousState) => ({
         ...previousState,
-        status: 'error',
-        errorMessage: error.message || 'Failed to load data.',
-      }))
+        status: "error",
+        errorMessage: error.message || "Failed to load data.",
+      }));
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadTransactions()
-  }, [loadTransactions])
+    loadTransactions();
+  }, [loadTransactions]);
 
   const paginatedTransactions =
-    appState.status === 'success'
+    appState.status === "success"
       ? getPageRows(
           appState.data.transactionsTable,
           transactionPage,
           TRANSACTIONS_PAGE_SIZE,
         )
-      : { rows: [], totalPages: 1, currentPage: 1 }
+      : { rows: [], totalPages: 1, currentPage: 1 };
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-8">
@@ -76,16 +76,16 @@ function App() {
         </p>
       </header>
 
-      {appState.status === 'loading' && <LoadingState />}
+      {appState.status === "loading" && <LoadingState />}
 
-      {appState.status === 'error' && (
+      {appState.status === "error" && (
         <ErrorState
           message={appState.errorMessage}
           onRetry={loadTransactions}
         />
       )}
 
-      {appState.status === 'success' && (
+      {appState.status === "success" && (
         <div className="space-y-4">
           <DynamicTable
             title="User Monthly Rewards"
@@ -107,7 +107,7 @@ function App() {
         </div>
       )}
     </main>
-  )
+  );
 }
 
-export default App
+export default App;

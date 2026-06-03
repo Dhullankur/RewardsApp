@@ -1,157 +1,210 @@
-const MONTH_FORMAT_OPTIONS = { month: 'long' }
+import { logger } from "./logger";
 
-export function calculateRewardPoints(amount) {
-  const safeAmount = Number.isFinite(amount) ? amount : 0
-  const wholeDollars = Math.floor(safeAmount)
+const MONTH_FORMAT_OPTIONS = { month: "long" };
+
+export function getPurchaseMonthParts(isoDate) {
+  const [yearText, monthText, dayText] = isoDate.split("-");
+
+  if (!yearText || !monthText || !dayText) {
+    return null;
+  }
+
+  const year = Number(yearText);
+  const monthNumber = Number(monthText);
+
+  if (!Number.isInteger(year) || !Number.isInteger(monthNumber)) {
+    return null;
+  }
+
+  if (monthNumber < 1 || monthNumber > 12) {
+    return null;
+  }
+
+  const monthDate = new Date(year, monthNumber - 1, 1);
+
+  return {
+    monthKey: `${yearText}-${monthText.padStart(2, "0")}`,
+    year,
+    month: monthDate.toLocaleString(undefined, MONTH_FORMAT_OPTIONS),
+  };
+}
+
+export function calculateRewardPoints(amountInDollars) {
+  if (!Number.isFinite(amountInDollars) || amountInDollars < 0) {
+    throw new Error(`Invalid purchase amount: ${amountInDollars}`);
+  }
+
+  const wholeDollars = Math.floor(amountInDollars);
 
   if (wholeDollars <= 50) {
-    return 0
-  };
+    return 0;
+  }
 
   if (wholeDollars <= 100) {
-    return wholeDollars - 50
-  };
+    return wholeDollars - 50;
+  }
 
-  return (wholeDollars - 100) * 2 + 50
-};
+  return (wholeDollars - 100) * 2 + 50;
+}
 
 export function formatCurrency(value) {
-  const safeValue = Number.isFinite(value) ? value : 0
+  const safeValue = Number.isFinite(value) ? value : 0;
   return safeValue.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-};
+  });
+}
 
 export function formatDate(value) {
-  const date = new Date(value)
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'Invalid date'
-  };
+    return "Invalid date";
+  }
 
   return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-};
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function validateTransaction(transaction) {
+  const hasRequiredFields =
+    typeof transaction.transactionId === "string" &&
+    typeof transaction.customerId === "string" &&
+    typeof transaction.name === "string" &&
+    typeof transaction.purchaseDate === "string" &&
+    Number.isFinite(transaction.price);
+
+  const monthParts = hasRequiredFields
+    ? getPurchaseMonthParts(transaction.purchaseDate)
+    : null;
+
+  return {
+    isValid: hasRequiredFields && monthParts !== null,
+    monthParts,
+  };
+}
 
 export function createRewardsReport(transactions) {
-  const validTransactions = transactions.filter((transaction) => {
-    const hasRequiredFields =
-      typeof transaction.transactionId === 'string' &&
-      typeof transaction.customerId === 'string' &&
-      typeof transaction.name === 'string' &&
-      typeof transaction.purchaseDate === 'string'
+  const validTransactions = transactions.reduce((accumulator, transaction) => {
+    const { isValid, monthParts } = validateTransaction(transaction);
 
-    if (!hasRequiredFields) {
-      return false
+    if (!isValid) {
+      logger.warn("Skipping invalid transaction", {
+        transactionId: transaction.transactionId ?? "unknown",
+        customerId: transaction.customerId ?? "unknown",
+      });
+      return accumulator;
     }
 
-    const parsedDate = new Date(transaction.purchaseDate)
-    return !Number.isNaN(parsedDate.getTime())
-  });
+    accumulator.push({
+      ...transaction,
+      monthParts,
+    });
 
-  const sortedTransactions = [...validTransactions].sort((left, right) =>
-    left.purchaseDate.localeCompare(right.purchaseDate),
-  );  
+    return accumulator;
+  }, []);
+
+  const sortedTransactions = [...validTransactions].sort(
+    (firstTransaction, secondTransaction) =>
+      firstTransaction.purchaseDate.localeCompare(
+        secondTransaction.purchaseDate,
+      ),
+  );
 
   const transactionsTable = sortedTransactions.map((transaction) => {
-    const rewardPoints = calculateRewardPoints(transaction.price)
+    const rewardPoints = calculateRewardPoints(transaction.price);
 
     return {
       transactionId: transaction.transactionId,
       customerName: transaction.name,
       purchaseDate: formatDate(transaction.purchaseDate),
-      productPurchased: transaction.productPurchased ?? 'N/A',
+      productPurchased: transaction.productPurchased ?? "N/A",
       price: formatCurrency(transaction.price),
       rewardPoints,
-    };  
+    };
   });
 
   const monthlyMap = validTransactions.reduce((accumulator, transaction) => {
-    const purchaseDate = new Date(transaction.purchaseDate)
-    const month = purchaseDate.toLocaleString(undefined, MONTH_FORMAT_OPTIONS)
-    const year = purchaseDate.getFullYear()
-    // Monthly report needs one row per customer per month (not one row per customer).
-    // Same customerId in April and May must land in different buckets.
-    const key = `${transaction.customerId}-${year}-${purchaseDate.getMonth()}`
-    const currentPoints = calculateRewardPoints(transaction.price)
-
-    const existingEntry = accumulator.get(key)
+    const key = `${transaction.customerId}-${transaction.monthParts.monthKey}`;
+    const currentPoints = calculateRewardPoints(transaction.price);
+    const existingEntry = accumulator.get(key);
 
     if (existingEntry) {
-      existingEntry.rewardPoints += currentPoints
-      return accumulator
-    };
+      existingEntry.rewardPoints += currentPoints;
+      return accumulator;
+    }
 
     accumulator.set(key, {
       customerId: transaction.customerId,
       name: transaction.name,
-      month,
-      year,
+      month: transaction.monthParts.month,
+      year: transaction.monthParts.year,
       rewardPoints: currentPoints,
-      sortableDate: new Date(year, purchaseDate.getMonth(), 1).toISOString(),
+      monthKey: transaction.monthParts.monthKey,
     });
 
-    return accumulator
-  }, new Map());  
+    return accumulator;
+  }, new Map());
 
   const monthlyRewardsTable = Array.from(monthlyMap.values())
-    .sort((left, right) => {
-      const dateDifference =
-        new Date(left.sortableDate) - new Date(right.sortableDate)
+    .sort((firstRow, secondRow) => {
+      const monthDifference = firstRow.monthKey.localeCompare(
+        secondRow.monthKey,
+      );
 
-      if (dateDifference !== 0) {
-        return dateDifference
+      if (monthDifference !== 0) {
+        return monthDifference;
       }
 
-      return left.customerId.localeCompare(right.customerId)
+      return firstRow.customerId.localeCompare(secondRow.customerId);
     })
-    .map((entry) => {
-      const row = { ...entry }
-      delete row.sortableDate
-      return row
-    });  
+    .map((row) => {
+      const visibleRow = { ...row };
+      delete visibleRow.monthKey;
+      return visibleRow;
+    });
 
   const totalRewardsMap = monthlyRewardsTable.reduce((accumulator, row) => {
     const existingTotal = accumulator.get(row.customerId);
 
-    // If the customer already exists in the accumulator, add the reward points to the existing total.
     if (existingTotal) {
-      existingTotal.rewardPoints += row.rewardPoints
-      return accumulator
+      existingTotal.rewardPoints += row.rewardPoints;
+      return accumulator;
     }
 
-    // If the customer does not exist in the accumulator, set the reward points for the customer.
     accumulator.set(row.customerId, {
+      customerId: row.customerId,
       customerName: row.name,
       rewardPoints: row.rewardPoints,
-    })
-    return accumulator
-  }, new Map())
+    });
 
-  const totalRewardsTable = Array.from(totalRewardsMap.values()).sort((a, b) =>
-    a.customerName.localeCompare(b.customerName),
-  )
+    return accumulator;
+  }, new Map());
+
+  const totalRewardsTable = Array.from(totalRewardsMap.values()).sort(
+    (firstCustomer, secondCustomer) =>
+      firstCustomer.customerId.localeCompare(secondCustomer.customerId),
+  );
 
   return {
     transactionsTable,
     monthlyRewardsTable,
     totalRewardsTable,
-  }
+  };
 }
 
 export function getPageRows(allRows, page, pageSize) {
-  const safePage = Math.max(1, page)
-  const startIndex = (safePage - 1) * pageSize
+  const safePage = Math.max(1, page);
+  const startIndex = (safePage - 1) * pageSize;
 
   return {
     rows: allRows.slice(startIndex, startIndex + pageSize),
     totalPages: Math.max(1, Math.ceil(allRows.length / pageSize)),
     currentPage: safePage,
-  }
+  };
 }

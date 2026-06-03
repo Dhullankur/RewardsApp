@@ -1,8 +1,8 @@
-import PropTypes from 'prop-types'
+import PropTypes from "prop-types";
 
 function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) {
-    return null
+    return null;
   }
 
   return (
@@ -29,13 +29,13 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 Pagination.propTypes = {
   currentPage: PropTypes.number.isRequired,
   totalPages: PropTypes.number.isRequired,
   onPageChange: PropTypes.func.isRequired,
-}
+};
 
-export default Pagination
+export default Pagination;

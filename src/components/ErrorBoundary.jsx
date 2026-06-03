@@ -1,45 +1,45 @@
-import { Component } from 'react'
-import PropTypes from 'prop-types'
-import ErrorFallback from './ErrorFallback'
-import { logger } from '../logger'
+import { Component } from "react";
+import PropTypes from "prop-types";
+import ErrorFallback from "./ErrorFallback";
+import { logger } from "../logger";
 
 class ErrorBoundary extends Component {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       hasError: false,
-    }
+    };
   }
 
   static getDerivedStateFromError() {
     return {
       hasError: true,
-    }
+    };
   }
 
   componentDidCatch(error, errorInfo) {
-    logger.error('Unhandled UI error', {
+    logger.error("Unhandled UI error", {
       message: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
-    })
+    });
   }
 
   handleReset = () => {
-    this.setState({ hasError: false })
-  }
+    this.setState({ hasError: false });
+  };
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback onReset={this.handleReset} />
+      return <ErrorFallback onReset={this.handleReset} />;
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
 
 ErrorBoundary.propTypes = {
   children: PropTypes.node.isRequired,
-}
+};
 
-export default ErrorBoundary
+export default ErrorBoundary;

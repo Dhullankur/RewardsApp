@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types'
+import PropTypes from "prop-types";
 
 function ErrorState({ message, onRetry }) {
   return (
@@ -12,12 +12,12 @@ function ErrorState({ message, onRetry }) {
         Retry
       </button>
     </div>
-  )
+  );
 }
 
 ErrorState.propTypes = {
   message: PropTypes.string.isRequired,
   onRetry: PropTypes.func.isRequired,
-}
+};
 
-export default ErrorState
+export default ErrorState;
