@@ -1,4 +1,5 @@
 {
+  "homepage": "https://Dhullankur.github.io/RewardsApp",
   "name": "newrewardsapp",
   "private": true,
   "version": "0.0.0",
@@ -9,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
@@ -28,6 +30,7 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "gh-pages": "^6.3.0",
     "globals": "^17.6.0",
     "jsdom": "^27.0.1",
     "vite": "^8.0.12",
