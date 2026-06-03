@@ -6,7 +6,7 @@
       "name": "John Carter",
       "purchaseDate": "2026-04-03",
       "productPurchased": "Running Shoes",
-      "price": 120.75
+      "price": 14900
     },
     {
       "transactionId": "T-2026-002",
@@ -14,7 +14,7 @@
       "name": "John Carter",
       "purchaseDate": "2026-04-18",
       "productPurchased": "Track Jacket",
-      "price": 80
+      "price": 8000
     },
     {
       "transactionId": "T-2026-003",
@@ -22,7 +22,7 @@
       "name": "John Carter",
       "purchaseDate": "2026-05-09",
       "productPurchased": "Energy Bars Pack",
-      "price": 45.99
+      "price": 4599
     },
     {
       "transactionId": "T-2026-004",
@@ -30,7 +30,7 @@
       "name": "John Carter",
       "purchaseDate": "2026-06-14",
       "productPurchased": "Gym Bag",
-      "price": 65
+      "price": 6500
     },
     {
       "transactionId": "T-2026-005",
@@ -38,7 +38,7 @@
       "name": "Mia Lopez",
       "purchaseDate": "2026-04-12",
       "productPurchased": "Yoga Mat",
-      "price": 100.2
+      "price": 10020
     },
     {
       "transactionId": "T-2026-006",
@@ -46,7 +46,7 @@
       "name": "Mia Lopez",
       "purchaseDate": "2026-05-04",
       "productPurchased": "Wireless Earbuds",
-      "price": 200.5
+      "price": 20050
     },
     {
       "transactionId": "T-2026-007",
@@ -54,7 +54,7 @@
       "name": "Mia Lopez",
       "purchaseDate": "2026-06-25",
       "productPurchased": "Fitness Band",
-      "price": 90
+      "price": 9000
     },
     {
       "transactionId": "T-2026-008",
@@ -62,7 +62,7 @@
       "name": "Arjun Mehta",
       "purchaseDate": "2026-04-20",
       "productPurchased": "Cycling Helmet",
-      "price": 55.5
+      "price": 5550
     },
     {
       "transactionId": "T-2026-009",
@@ -70,7 +70,7 @@
       "name": "Arjun Mehta",
       "purchaseDate": "2026-05-17",
       "productPurchased": "Protein Powder",
-      "price": 110
+      "price": 11000
     },
     {
       "transactionId": "T-2026-010",
@@ -78,7 +78,7 @@
       "name": "Arjun Mehta",
       "purchaseDate": "2026-06-30",
       "productPurchased": "Water Bottle",
-      "price": 65
+      "price": 6500
     }
   ]
 }

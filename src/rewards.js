@@ -137,7 +137,7 @@ export function createRewardsReport(transactions) {
   const totalRewardsTable = Array.from(totalRewardsMap.values()).sort((a, b) =>
     a.customerName.localeCompare(b.customerName),
   )
-console.log("transactionsTable", transactionsTable);
+
   return {
     transactionsTable,
     monthlyRewardsTable,
