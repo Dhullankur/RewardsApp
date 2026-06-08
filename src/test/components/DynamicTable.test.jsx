@@ -9,6 +9,23 @@ describe("DynamicTable", () => {
     expect(screen.getByText("No data available.")).toBeInTheDocument();
   });
 
+  it("hides id column when configured", () => {
+    render(
+      <DynamicTable
+        title="Rewards"
+        rows={[
+          { id: "MU-1", customerName: "John", rewardPoints: 30 },
+          { id: "MU-2", customerName: "Jane", rewardPoints: 50 },
+        ]}
+        hiddenColumns={["id"]}
+      />,
+    );
+
+    expect(screen.getByText("John")).toBeInTheDocument();
+    expect(screen.queryByText("MU-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Id")).not.toBeInTheDocument();
+  });
+
   it("renders headers from row keys", () => {
     render(
       <DynamicTable

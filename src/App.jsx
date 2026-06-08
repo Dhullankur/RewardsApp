@@ -1,53 +1,43 @@
-import { useCallback, useEffect, useState } from "react";
-import DynamicTable from "./components/DynamicTable";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
+import TableSection from "./components/TableSection";
+import DashboardFilters from "./components/DashboardFilters";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
-import Pagination from "./components/Pagination";
 import { fetchTransactions } from "./api";
-import { createRewardsReport, getPageRows } from "./rewards";
+import {
+  dashboardReducer,
+  INITIAL_DASHBOARD_STATE,
+} from "./appReducer";
+import {
+  DASHBOARD_COPY,
+  EMPTY_REWARDS_REPORT,
+  TABLE_CONFIG,
+} from "./constants";
+import {
+  createRewardsReport,
+  filterTransactionsByDate,
+  getAvailablePurchaseDates,
+} from "./rewards";
 import { logger } from "./logger";
 
-const INITIAL_DATA = {
-  monthlyRewardsTable: [],
-  totalRewardsTable: [],
-  transactionsTable: [],
-};
-
-const TRANSACTIONS_PAGE_SIZE = 5;
-
 function App() {
-  const [appState, setAppState] = useState({
-    status: "loading",
-    errorMessage: "",
-    data: INITIAL_DATA,
-  });
-  const [transactionPage, setTransactionPage] = useState(1);
+  const [state, dispatch] = useReducer(
+    dashboardReducer,
+    INITIAL_DASHBOARD_STATE,
+  );
 
   const loadTransactions = useCallback(async () => {
-    setAppState((previousState) => ({
-      ...previousState,
-      status: "loading",
-      errorMessage: "",
-    }));
+    dispatch({ type: "LOAD_START" });
 
     try {
       const transactions = await fetchTransactions();
-      const report = createRewardsReport(transactions);
-
-      setTransactionPage(1);
-      setAppState({
-        status: "success",
-        errorMessage: "",
-        data: report,
-      });
+      dispatch({ type: "LOAD_SUCCESS", transactions });
     } catch (error) {
       logger.error("Data loading failed", { message: error.message });
-
-      setAppState((previousState) => ({
-        ...previousState,
-        status: "error",
+      dispatch({
+        type: "LOAD_ERROR",
         errorMessage: error.message || "Failed to load data.",
-      }));
+      });
     }
   }, []);
 
@@ -55,55 +45,102 @@ function App() {
     loadTransactions();
   }, [loadTransactions]);
 
-  const paginatedTransactions =
-    appState.status === "success"
-      ? getPageRows(
-          appState.data.transactionsTable,
-          transactionPage,
-          TRANSACTIONS_PAGE_SIZE,
-        )
-      : { rows: [], totalPages: 1, currentPage: 1 };
+  const availableDates = useMemo(() => {
+    if (state.status !== "success") {
+      return [];
+    }
+
+    return getAvailablePurchaseDates(state.transactions);
+  }, [state]);
+
+  const filteredTransactions = useMemo(() => {
+    if (state.status !== "success") {
+      return [];
+    }
+
+    return filterTransactionsByDate(
+      state.transactions,
+      state.filters.dateFrom,
+      state.filters.dateTo,
+    );
+  }, [state]);
+
+  const report = useMemo(() => {
+    if (state.status !== "success") {
+      return EMPTY_REWARDS_REPORT;
+    }
+
+    return createRewardsReport(filteredTransactions);
+  }, [state.status, filteredTransactions]);
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-8">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          Retail Rewards Dashboard
+          {DASHBOARD_COPY.title}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Rewards are calculated per transaction: 2 points for every dollar over
-          $100, and 1 point for every dollar between $50 and $100.
-        </p>
+        <p className="mt-2 text-sm text-slate-600">{DASHBOARD_COPY.description}</p>
       </header>
 
-      {appState.status === "loading" && <LoadingState />}
+      {state.status === "loading" && <LoadingState />}
 
-      {appState.status === "error" && (
+      {state.status === "error" && (
         <ErrorState
-          message={appState.errorMessage}
+          message={state.errorMessage}
           onRetry={loadTransactions}
         />
       )}
 
-      {appState.status === "success" && (
+      {state.status === "success" && (
         <div className="space-y-4">
-          <DynamicTable
-            title="User Monthly Rewards"
-            rows={appState.data.monthlyRewardsTable}
+          <DashboardFilters
+            dateFrom={state.filters.dateFrom}
+            dateTo={state.filters.dateTo}
+            availableDates={availableDates}
+            pageSize={state.filters.pageSize}
+            filteredCount={filteredTransactions.length}
+            totalCount={state.transactions.length}
+            onDateFromChange={(value) =>
+              dispatch({ type: "SET_DATE_FROM", value })
+            }
+            onDateToChange={(value) =>
+              dispatch({ type: "SET_DATE_TO", value })
+            }
+            onClearDates={() => dispatch({ type: "CLEAR_DATES" })}
+            onPageSizeChange={(value) =>
+              dispatch({ type: "SET_PAGE_SIZE", value })
+            }
           />
-          <DynamicTable
-            title="Total Rewards"
-            rows={appState.data.totalRewardsTable}
-          />
-          <DynamicTable
-            title="Transactions"
-            rows={paginatedTransactions.rows}
-          />
-          <Pagination
-            currentPage={paginatedTransactions.currentPage}
-            totalPages={paginatedTransactions.totalPages}
-            onPageChange={setTransactionPage}
-          />
+
+          {TABLE_CONFIG.map(({ id, title, reportKey, hiddenColumns }) => {
+            const tableState = state.tables[id];
+
+            return (
+              <TableSection
+                key={id}
+                title={title}
+                rows={report[reportKey]}
+                page={tableState.page}
+                onPageChange={(page) =>
+                  dispatch({ type: "SET_TABLE_PAGE", table: id, page })
+                }
+                pageSize={state.filters.pageSize}
+                sortKey={tableState.sortKey}
+                sortDirection={tableState.sortDirection}
+                onSortKeyChange={(sortKey) =>
+                  dispatch({ type: "SET_TABLE_SORT_KEY", table: id, sortKey })
+                }
+                onSortDirectionChange={(direction) =>
+                  dispatch({
+                    type: "SET_TABLE_SORT_DIRECTION",
+                    table: id,
+                    direction,
+                  })
+                }
+                hiddenColumns={hiddenColumns}
+              />
+            );
+          })}
         </div>
       )}
     </main>

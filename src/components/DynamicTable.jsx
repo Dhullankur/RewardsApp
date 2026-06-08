@@ -14,8 +14,45 @@ function createLabel(columnName) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function DynamicTable({ title, rows }) {
-  const columns = getColumns(rows);
+function SortIndicator({ column, sortKey, sortDirection, sortColumnMap = {} }) {
+  const isActive = column === sortKey || sortColumnMap[column] === sortKey;
+
+  if (!isActive) {
+    return (
+      <span className="ml-1 inline-flex flex-col text-[10px] leading-none text-slate-400">
+        <span>▲</span>
+        <span>▼</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="ml-1 text-xs text-slate-900" aria-hidden="true">
+      {sortDirection >= 0 ? "▲" : "▼"}
+    </span>
+  );
+}
+
+SortIndicator.propTypes = {
+  column: PropTypes.string.isRequired,
+  sortKey: PropTypes.string.isRequired,
+  sortDirection: PropTypes.number.isRequired,
+  sortColumnMap: PropTypes.objectOf(PropTypes.string),
+};
+
+function DynamicTable({
+  title,
+  rows,
+  hiddenColumns = [],
+  sortKey = "",
+  sortDirection = 1,
+  onSort,
+  sortColumnMap = {},
+}) {
+  const columns = getColumns(rows).filter(
+    (column) => !hiddenColumns.includes(column),
+  );
+  const isSortable = Boolean(onSort);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -33,28 +70,49 @@ function DynamicTable({ title, rows }) {
                     key={column}
                     className="border border-slate-200 px-3 py-2 font-semibold text-slate-700"
                   >
-                    {createLabel(column)}
+                    {isSortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort(column)}
+                        className="inline-flex items-center gap-0.5 hover:text-slate-900"
+                        aria-label={`Sort by ${createLabel(column)}`}
+                      >
+                        {createLabel(column)}
+                        <SortIndicator
+                          column={column}
+                          sortKey={sortKey}
+                          sortDirection={sortDirection}
+                          sortColumnMap={sortColumnMap}
+                        />
+                      </button>
+                    ) : (
+                      createLabel(column)
+                    )}
                   </th>
                 ))}
               </tr>
             </thead>
 
             <tbody>
-              {rows.map((row, rowIndex) => (
+              {rows.map((row, rowIndex) => {
+                const rowKey = row.id ?? `${title}-${rowIndex}`;
+
+                return (
                 <tr
-                  key={`${title}-${rowIndex}`}
+                  key={rowKey}
                   className="odd:bg-white even:bg-slate-50"
                 >
                   {columns.map((column) => (
                     <td
-                      key={`${title}-${rowIndex}-${column}`}
+                      key={`${rowKey}-${column}`}
                       className="border border-slate-200 px-3 py-2 text-slate-700"
                     >
                       {String(row[column])}
                     </td>
                   ))}
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -66,6 +124,11 @@ function DynamicTable({ title, rows }) {
 DynamicTable.propTypes = {
   title: PropTypes.string.isRequired,
   rows: PropTypes.arrayOf(PropTypes.object).isRequired,
+  hiddenColumns: PropTypes.arrayOf(PropTypes.string),
+  sortKey: PropTypes.string,
+  sortDirection: PropTypes.number,
+  onSort: PropTypes.func,
+  sortColumnMap: PropTypes.objectOf(PropTypes.string),
 };
 
 export default DynamicTable;

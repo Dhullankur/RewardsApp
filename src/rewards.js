@@ -1,39 +1,22 @@
-import { logger } from "./logger";
+import {
+  COLUMN_KEYS,
+  CURRENCY_SORT_KEYS,
+  MONTH_FORMAT_OPTIONS,
+} from "./constants";
 
-const MONTH_FORMAT_OPTIONS = { month: "long" };
+function toCents(amountInDollars) {
+  return Math.round(amountInDollars * 100);
+}
 
-export function getPurchaseMonthParts(isoDate) {
-  const [yearText, monthText, dayText] = isoDate.split("-");
+function fromCents(amountInCents) {
+  return amountInCents / 100;
+}
 
-  if (!yearText || !monthText || !dayText) {
-    return null;
-  }
-
-  const year = Number(yearText);
-  const monthNumber = Number(monthText);
-
-  if (!Number.isInteger(year) || !Number.isInteger(monthNumber)) {
-    return null;
-  }
-
-  if (monthNumber < 1 || monthNumber > 12) {
-    return null;
-  }
-
-  const monthDate = new Date(year, monthNumber - 1, 1);
-
-  return {
-    monthKey: `${yearText}-${monthText.padStart(2, "0")}`,
-    year,
-    month: monthDate.toLocaleString(undefined, MONTH_FORMAT_OPTIONS),
-  };
+export function formatCurrency(value) {
+  return `$${fromCents(toCents(value)).toFixed(2)}`;
 }
 
 export function calculateRewardPoints(amountInDollars) {
-  if (!Number.isFinite(amountInDollars) || amountInDollars < 0) {
-    throw new Error(`Invalid purchase amount: ${amountInDollars}`);
-  }
-
   const wholeDollars = Math.floor(amountInDollars);
 
   if (wholeDollars <= 50) {
@@ -47,155 +30,187 @@ export function calculateRewardPoints(amountInDollars) {
   return (wholeDollars - 100) * 2 + 50;
 }
 
-export function formatCurrency(value) {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  return safeValue.toLocaleString(undefined, {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-export function formatDate(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Invalid date";
-  }
-
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function validateTransaction(transaction) {
-  const hasRequiredFields =
-    typeof transaction.transactionId === "string" &&
-    typeof transaction.customerId === "string" &&
-    typeof transaction.name === "string" &&
-    typeof transaction.purchaseDate === "string" &&
-    Number.isFinite(transaction.price);
-
-  const monthParts = hasRequiredFields
-    ? getPurchaseMonthParts(transaction.purchaseDate)
-    : null;
+function getMonthParts(purchaseDate) {
+  const [yearText, monthText] = purchaseDate.split("-");
+  const year = Number(yearText);
+  const monthNumber = Number(monthText);
+  const monthDate = new Date(year, monthNumber - 1, 1);
 
   return {
-    isValid: hasRequiredFields && monthParts !== null,
-    monthParts,
+    year,
+    month: monthDate.toLocaleString(undefined, MONTH_FORMAT_OPTIONS),
+    monthKey: `${yearText}-${monthText}`,
   };
 }
 
-export function createRewardsReport(transactions) {
-  const validTransactions = transactions.reduce((accumulator, transaction) => {
-    const { isValid, monthParts } = validateTransaction(transaction);
-
-    if (!isValid) {
-      logger.warn("Skipping invalid transaction", {
-        transactionId: transaction.transactionId ?? "unknown",
-        customerId: transaction.customerId ?? "unknown",
-      });
-      return accumulator;
-    }
-
-    accumulator.push({
-      ...transaction,
-      monthParts,
-    });
-
-    return accumulator;
-  }, []);
-
-  const sortedTransactions = [...validTransactions].sort(
-    (firstTransaction, secondTransaction) =>
-      firstTransaction.purchaseDate.localeCompare(
-        secondTransaction.purchaseDate,
-      ),
-  );
-
-  const transactionsTable = sortedTransactions.map((transaction) => {
-    const rewardPoints = calculateRewardPoints(transaction.price);
-
-    return {
-      transactionId: transaction.transactionId,
-      customerName: transaction.name,
-      purchaseDate: formatDate(transaction.purchaseDate),
-      productPurchased: transaction.productPurchased ?? "N/A",
-      price: formatCurrency(transaction.price),
-      rewardPoints,
-    };
-  });
-
-  const monthlyMap = validTransactions.reduce((accumulator, transaction) => {
-    const key = `${transaction.customerId}-${transaction.monthParts.monthKey}`;
-    const currentPoints = calculateRewardPoints(transaction.price);
+export function buildMonthlyUsage(transactions) {
+  const monthlyMap = transactions.reduce((accumulator, transaction) => {
+    const { year, month, monthKey } = getMonthParts(transaction.purchaseDate);
+    const key = `${transaction.customerId}-${monthKey}`;
+    const priceInCents = toCents(transaction.price);
     const existingEntry = accumulator.get(key);
 
     if (existingEntry) {
-      existingEntry.rewardPoints += currentPoints;
+      const amountSpentInCents = existingEntry.amountSpentInCents + priceInCents;
+
+      accumulator.set(key, {
+        ...existingEntry,
+        amountSpentInCents,
+        rewardPoints: calculateRewardPoints(fromCents(amountSpentInCents)),
+      });
+
       return accumulator;
     }
 
     accumulator.set(key, {
+      id: `MU-${monthKey}-${transaction.customerId}`,
       customerId: transaction.customerId,
       name: transaction.name,
-      month: transaction.monthParts.month,
-      year: transaction.monthParts.year,
-      rewardPoints: currentPoints,
-      monthKey: transaction.monthParts.monthKey,
+      month,
+      year,
+      amountSpentInCents: priceInCents,
+      rewardPoints: calculateRewardPoints(transaction.price),
     });
 
     return accumulator;
   }, new Map());
 
-  const monthlyRewardsTable = Array.from(monthlyMap.values())
-    .sort((firstRow, secondRow) => {
-      const monthDifference = firstRow.monthKey.localeCompare(
-        secondRow.monthKey,
-      );
+  return Array.from(monthlyMap.values()).map(
+    ({ amountSpentInCents, ...row }) => ({
+      ...row,
+      amountSpent: fromCents(amountSpentInCents),
+    }),
+  );
+}
 
-      if (monthDifference !== 0) {
-        return monthDifference;
-      }
+export function buildTotalRewards(monthlyUsage) {
+  const totalMap = monthlyUsage.reduce((accumulator, row) => {
+    const existingEntry = accumulator.get(row.customerId);
+    const amountSpentInCents = toCents(row.amountSpent);
 
-      return firstRow.customerId.localeCompare(secondRow.customerId);
-    })
-    .map((row) => {
-      const visibleRow = { ...row };
-      delete visibleRow.monthKey;
-      return visibleRow;
-    });
+    if (existingEntry) {
+      accumulator.set(row.customerId, {
+        ...existingEntry,
+        amountSpentInCents: existingEntry.amountSpentInCents + amountSpentInCents,
+        rewardPoints: existingEntry.rewardPoints + row.rewardPoints,
+      });
 
-  const totalRewardsMap = monthlyRewardsTable.reduce((accumulator, row) => {
-    const existingTotal = accumulator.get(row.customerId);
-
-    if (existingTotal) {
-      existingTotal.rewardPoints += row.rewardPoints;
       return accumulator;
     }
 
     accumulator.set(row.customerId, {
+      id: `TR-${row.customerId}`,
       customerId: row.customerId,
       customerName: row.name,
+      amountSpentInCents,
       rewardPoints: row.rewardPoints,
     });
 
     return accumulator;
   }, new Map());
 
-  const totalRewardsTable = Array.from(totalRewardsMap.values()).sort(
-    (firstCustomer, secondCustomer) =>
-      firstCustomer.customerId.localeCompare(secondCustomer.customerId),
-  );
+  return Array.from(totalMap.values()).map(({ amountSpentInCents, ...row }) => ({
+    ...row,
+    amountSpent: fromCents(amountSpentInCents),
+  }));
+}
+
+export function createRewardsReport(transactions) {
+  const monthlyUsage = buildMonthlyUsage(transactions);
+  const totalRewards = buildTotalRewards(monthlyUsage);
+  const transactionsTable = [...transactions]
+    .sort((first, second) =>
+      first.purchaseDate.localeCompare(second.purchaseDate),
+    )
+    .map((transaction) => ({
+      ...transaction,
+      price: formatCurrency(transaction.price),
+      rewardPoints: calculateRewardPoints(transaction.price),
+    }));
 
   return {
     transactionsTable,
-    monthlyRewardsTable,
-    totalRewardsTable,
+    monthlyRewardsTable: monthlyUsage.map((row) => ({
+      ...row,
+      amountSpent: formatCurrency(row.amountSpent),
+    })),
+    totalRewardsTable: totalRewards.map((row) => ({
+      ...row,
+      amountSpent: formatCurrency(row.amountSpent),
+    })),
   };
+}
+
+export function getAvailablePurchaseDates(transactions) {
+  return [...new Set(transactions.map((transaction) => transaction.purchaseDate))]
+    .sort((firstDate, secondDate) => firstDate.localeCompare(secondDate));
+}
+
+export function formatPurchaseDateLabel(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function filterTransactionsByDate(transactions, dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) {
+    return transactions;
+  }
+
+  return transactions.filter((transaction) => {
+    const purchaseDate = transaction.purchaseDate;
+
+    if (dateFrom && purchaseDate < dateFrom) {
+      return false;
+    }
+
+    if (dateTo && purchaseDate > dateTo) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function parseSortableValue(row, sortKey) {
+  const value = row[sortKey];
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (CURRENCY_SORT_KEYS.includes(sortKey)) {
+    return Number(String(value).replace(/[^0-9.-]/g, ""));
+  }
+
+  if (sortKey === COLUMN_KEYS.REWARD_POINTS || sortKey === COLUMN_KEYS.YEAR) {
+    return Number(value);
+  }
+
+  return String(value ?? "");
+}
+
+export function sortTableRows(rows, sortKey, sortDirection = 1) {
+  if (!rows.length || !sortKey) {
+    return rows;
+  }
+
+  const direction = sortDirection >= 0 ? 1 : -1;
+
+  return [...rows].sort((firstRow, secondRow) => {
+    const firstValue = parseSortableValue(firstRow, sortKey);
+    const secondValue = parseSortableValue(secondRow, sortKey);
+
+    if (typeof firstValue === "number" && typeof secondValue === "number") {
+      return (firstValue - secondValue) * direction;
+    }
+
+    return String(firstValue).localeCompare(String(secondValue)) * direction;
+  });
 }
 
 export function getPageRows(allRows, page, pageSize) {

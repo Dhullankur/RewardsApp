@@ -1,9 +1,4 @@
-// API returns `price` in integer cents; convert once here before reward logic and display.
 export function centsToDollars(amountInCents) {
-  if (!Number.isInteger(amountInCents) || amountInCents < 0) {
-    throw new Error(`Invalid price in cents: ${amountInCents}`);
-  }
-
   return amountInCents / 100;
 }
 
@@ -22,10 +17,6 @@ export async function fetchTransactions() {
   }
 
   const payload = await response.json();
-
-  if (!payload || !Array.isArray(payload.transactions)) {
-    throw new Error("Invalid transactions payload.");
-  }
 
   return payload.transactions.map(normalizeTransaction);
 }
