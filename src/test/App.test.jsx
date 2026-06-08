@@ -83,10 +83,10 @@ describe("App", () => {
     });
 
     fireEvent.change(screen.getByLabelText("Date from"), {
-      target: { value: "2026-05-15" },
+      target: { value: "2026-05-01" },
     });
     fireEvent.change(screen.getByLabelText("Date to"), {
-      target: { value: "2026-05-28" },
+      target: { value: "2026-05-31" },
     });
 
     expect(screen.getByText("Showing 3 of 8 transactions")).toBeInTheDocument();

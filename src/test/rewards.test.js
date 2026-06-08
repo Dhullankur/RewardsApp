@@ -8,7 +8,6 @@ import {
   createRewardsReport,
   filterTransactionsByDate,
   formatCurrency,
-  getAvailablePurchaseDates,
   getPageRows,
   sortTableRows,
 } from "../rewards";
@@ -164,18 +163,6 @@ describe("buildTotalRewards", () => {
     ]);
 
     expect(totals.map((row) => row.customerId)).toEqual(["C-200", "C-100"]);
-  });
-});
-
-describe("getAvailablePurchaseDates", () => {
-  it("returns sorted unique purchase dates", () => {
-    const dates = getAvailablePurchaseDates([
-      { purchaseDate: "2026-05-10" },
-      { purchaseDate: "2026-04-10" },
-      { purchaseDate: "2026-05-10" },
-    ]);
-
-    expect(dates).toEqual(["2026-04-10", "2026-05-10"]);
   });
 });
 

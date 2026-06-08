@@ -16,7 +16,6 @@ import {
 import {
   createRewardsReport,
   filterTransactionsByDate,
-  getAvailablePurchaseDates,
 } from "./rewards";
 import { logger } from "./logger";
 
@@ -44,14 +43,6 @@ function App() {
   useEffect(() => {
     loadTransactions();
   }, [loadTransactions]);
-
-  const availableDates = useMemo(() => {
-    if (state.status !== "success") {
-      return [];
-    }
-
-    return getAvailablePurchaseDates(state.transactions);
-  }, [state]);
 
   const filteredTransactions = useMemo(() => {
     if (state.status !== "success") {
@@ -96,7 +87,6 @@ function App() {
           <DashboardFilters
             dateFrom={state.filters.dateFrom}
             dateTo={state.filters.dateTo}
-            availableDates={availableDates}
             pageSize={state.filters.pageSize}
             filteredCount={filteredTransactions.length}
             totalCount={state.transactions.length}

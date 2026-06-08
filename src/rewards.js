@@ -141,21 +141,6 @@ export function createRewardsReport(transactions) {
   };
 }
 
-export function getAvailablePurchaseDates(transactions) {
-  return [...new Set(transactions.map((transaction) => transaction.purchaseDate))]
-    .sort((firstDate, secondDate) => firstDate.localeCompare(secondDate));
-}
-
-export function formatPurchaseDateLabel(isoDate) {
-  const [year, month, day] = isoDate.split("-").map(Number);
-
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export function filterTransactionsByDate(transactions, dateFrom, dateTo) {
   if (!dateFrom && !dateTo) {
     return transactions;
