@@ -29,7 +29,6 @@ Mock API file: `public/transactions.json`
 All tests live under `src/test/`.
 
 ## Screenshots
-<img width="1405" height="799" alt="Screenshot 2026-06-09 at 10 38 12 AM" src="https://github.com/user-attachments/assets/273c5654-6786-4651-bcf4-de58a744cd5c" />
-<img width="1399" height="725" alt="Screenshot 2026-06-09 at 10 38 32 AM" src="https://github.com/user-attachments/assets/ab9129af-f47a-4640-aa0e-1f71600a3aee" />
+
 
 
