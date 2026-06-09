@@ -1,8 +1,12 @@
+import { COLUMN_KEYS, CURRENCY_SORT_KEYS } from "./constants";
 import {
-  COLUMN_KEYS,
-  CURRENCY_SORT_KEYS,
-  MONTH_FORMAT_OPTIONS,
-} from "./constants";
+  filterTransactionsToMonth,
+  formatApiDate,
+  getMonthKey,
+  getMonthStartApiDate,
+  getRecentMonthKey,
+  parseToDayjs,
+} from "./dates";
 
 function toCents(amountInDollars) {
   return Math.round(amountInDollars * 100);
@@ -30,22 +34,19 @@ export function calculateRewardPoints(amountInDollars) {
   return (wholeDollars - 100) * 2 + 50;
 }
 
-function getMonthParts(purchaseDate) {
-  const [yearText, monthText] = purchaseDate.split("-");
-  const year = Number(yearText);
-  const monthNumber = Number(monthText);
-  const monthDate = new Date(year, monthNumber - 1, 1);
+export function buildCustomerNameMap(transactions) {
+  return transactions.reduce((nameMap, transaction) => {
+    if (!nameMap.has(transaction.customerId)) {
+      nameMap.set(transaction.customerId, transaction.name);
+    }
 
-  return {
-    year,
-    month: monthDate.toLocaleString(undefined, MONTH_FORMAT_OPTIONS),
-    monthKey: `${yearText}-${monthText}`,
-  };
+    return nameMap;
+  }, new Map());
 }
 
-export function buildMonthlyUsage(transactions) {
+export function buildMonthlyUsage(transactions, customerNames) {
   const monthlyMap = transactions.reduce((accumulator, transaction) => {
-    const { year, month, monthKey } = getMonthParts(transaction.purchaseDate);
+    const monthKey = getMonthKey(transaction.purchaseDate);
     const key = `${transaction.customerId}-${monthKey}`;
     const priceInCents = toCents(transaction.price);
     const existingEntry = accumulator.get(key);
@@ -65,9 +66,8 @@ export function buildMonthlyUsage(transactions) {
     accumulator.set(key, {
       id: `MU-${monthKey}-${transaction.customerId}`,
       customerId: transaction.customerId,
-      name: transaction.name,
-      month,
-      year,
+      name: customerNames.get(transaction.customerId),
+      date: getMonthStartApiDate(transaction.purchaseDate),
       amountSpentInCents: priceInCents,
       rewardPoints: calculateRewardPoints(transaction.price),
     });
@@ -83,7 +83,7 @@ export function buildMonthlyUsage(transactions) {
   );
 }
 
-export function buildTotalRewards(monthlyUsage) {
+export function buildTotalRewards(monthlyUsage, customerNames) {
   const totalMap = monthlyUsage.reduce((accumulator, row) => {
     const existingEntry = accumulator.get(row.customerId);
     const amountSpentInCents = toCents(row.amountSpent);
@@ -101,7 +101,7 @@ export function buildTotalRewards(monthlyUsage) {
     accumulator.set(row.customerId, {
       id: `TR-${row.customerId}`,
       customerId: row.customerId,
-      customerName: row.name,
+      name: customerNames.get(row.customerId),
       amountSpentInCents,
       rewardPoints: row.rewardPoints,
     });
@@ -116,17 +116,24 @@ export function buildTotalRewards(monthlyUsage) {
 }
 
 export function createRewardsReport(transactions) {
-  const monthlyUsage = buildMonthlyUsage(transactions);
-  const totalRewards = buildTotalRewards(monthlyUsage);
-  const transactionsTable = [...transactions]
-    .sort((first, second) =>
-      first.purchaseDate.localeCompare(second.purchaseDate),
-    )
-    .map((transaction) => ({
-      ...transaction,
-      price: formatCurrency(transaction.price),
-      rewardPoints: calculateRewardPoints(transaction.price),
-    }));
+  const recentMonthKey = getRecentMonthKey(transactions);
+  const monthTransactions = filterTransactionsToMonth(
+    transactions,
+    recentMonthKey,
+  );
+  const customerNames = buildCustomerNameMap(transactions);
+  const monthlyUsage = buildMonthlyUsage(monthTransactions, customerNames);
+  const totalRewards = buildTotalRewards(monthlyUsage, customerNames);
+  const transactionsTable = monthTransactions.map((transaction) => ({
+    id: transaction.transactionId,
+    transactionId: transaction.transactionId,
+    customerId: transaction.customerId,
+    name: customerNames.get(transaction.customerId),
+    purchaseDate: formatApiDate(transaction.purchaseDate),
+    productPurchased: transaction.productPurchased,
+    price: formatCurrency(transaction.price),
+    rewardPoints: calculateRewardPoints(transaction.price),
+  }));
 
   return {
     transactionsTable,
@@ -172,8 +179,16 @@ function parseSortableValue(row, sortKey) {
     return Number(String(value).replace(/[^0-9.-]/g, ""));
   }
 
-  if (sortKey === COLUMN_KEYS.REWARD_POINTS || sortKey === COLUMN_KEYS.YEAR) {
+  if (sortKey === COLUMN_KEYS.REWARD_POINTS) {
     return Number(value);
+  }
+
+  if (
+    sortKey === COLUMN_KEYS.DATE ||
+    sortKey === COLUMN_KEYS.PURCHASE_DATE
+  ) {
+    const parsedDate = parseToDayjs(value);
+    return parsedDate ? parsedDate.valueOf() : String(value ?? "");
   }
 
   return String(value ?? "");

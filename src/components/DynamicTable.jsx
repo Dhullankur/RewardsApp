@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { tableRowPropType } from "../propTypes";
 
 function getColumns(rows) {
   if (!rows.length) {
@@ -12,6 +13,10 @@ function createLabel(columnName) {
   return columnName
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (character) => character.toUpperCase());
+}
+
+function getRowKey(row) {
+  return row.id ?? row.transactionId;
 }
 
 function SortIndicator({ column, sortKey, sortDirection, sortColumnMap = {} }) {
@@ -94,24 +99,24 @@ function DynamicTable({
             </thead>
 
             <tbody>
-              {rows.map((row, rowIndex) => {
-                const rowKey = row.id ?? `${title}-${rowIndex}`;
+              {rows.map((row) => {
+                const rowKey = getRowKey(row);
 
                 return (
-                <tr
-                  key={rowKey}
-                  className="odd:bg-white even:bg-slate-50"
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={`${rowKey}-${column}`}
-                      className="border border-slate-200 px-3 py-2 text-slate-700"
-                    >
-                      {String(row[column])}
-                    </td>
-                  ))}
-                </tr>
-              );
+                  <tr
+                    key={rowKey}
+                    className="odd:bg-white even:bg-slate-50"
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={`${rowKey}-${column}`}
+                        className="border border-slate-200 px-3 py-2 text-slate-700"
+                      >
+                        {String(row[column])}
+                      </td>
+                    ))}
+                  </tr>
+                );
               })}
             </tbody>
           </table>
@@ -123,7 +128,7 @@ function DynamicTable({
 
 DynamicTable.propTypes = {
   title: PropTypes.string.isRequired,
-  rows: PropTypes.arrayOf(PropTypes.object).isRequired,
+  rows: PropTypes.arrayOf(tableRowPropType).isRequired,
   hiddenColumns: PropTypes.arrayOf(PropTypes.string),
   sortKey: PropTypes.string,
   sortDirection: PropTypes.number,

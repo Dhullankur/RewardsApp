@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import DynamicTable from "./DynamicTable";
 import Pagination from "./Pagination";
+import { tableRowPropType } from "../propTypes";
 import { getPageRows, sortTableRows } from "../rewards";
 
 function TableSection({
@@ -27,18 +28,28 @@ function TableSection({
     [sortedRows, page, pageSize],
   );
 
-  const handleSort = (column) => {
-    const resolvedColumn = sortColumnMap[column] ?? column;
+  const handleSort = useCallback(
+    (column) => {
+      const resolvedColumn = sortColumnMap[column] ?? column;
 
-    if (sortKey === resolvedColumn) {
-      onSortDirectionChange(sortDirection * -1);
-    } else {
-      onSortKeyChange(resolvedColumn);
-      onSortDirectionChange(1);
-    }
+      if (sortKey === resolvedColumn) {
+        onSortDirectionChange(sortDirection * -1);
+      } else {
+        onSortKeyChange(resolvedColumn);
+        onSortDirectionChange(1);
+      }
 
-    onPageChange(1);
-  };
+      onPageChange(1);
+    },
+    [
+      sortKey,
+      sortDirection,
+      sortColumnMap,
+      onSortKeyChange,
+      onSortDirectionChange,
+      onPageChange,
+    ],
+  );
 
   return (
     <section>
@@ -62,7 +73,7 @@ function TableSection({
 
 TableSection.propTypes = {
   title: PropTypes.string.isRequired,
-  rows: PropTypes.arrayOf(PropTypes.object).isRequired,
+  rows: PropTypes.arrayOf(tableRowPropType).isRequired,
   page: PropTypes.number.isRequired,
   onPageChange: PropTypes.func.isRequired,
   pageSize: PropTypes.number.isRequired,

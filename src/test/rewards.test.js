@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockTransactions } from "./fixtures/transactions";
 import { REPORT_KEYS } from "../constants";
 import {
+  buildCustomerNameMap,
   buildMonthlyUsage,
   buildTotalRewards,
   calculateRewardPoints,
@@ -36,85 +37,62 @@ describe("calculateRewardPoints", () => {
   });
 });
 
+describe("buildCustomerNameMap", () => {
+  it("keeps one name per customer id", () => {
+    const nameMap = buildCustomerNameMap(mockTransactions);
+
+    expect(nameMap.get("C-101")).toBe("Jane Doe");
+    expect(nameMap.get("C-102")).toBe("Adam Smith");
+  });
+});
+
 describe("createRewardsReport", () => {
-  it("builds all tables from mock transactions with currency and reward points", () => {
+  it("builds all tables from the most recent month only", () => {
     const report = createRewardsReport(mockTransactions);
 
-    expect(report[REPORT_KEYS.TRANSACTIONS]).toHaveLength(8);
+    expect(report[REPORT_KEYS.TRANSACTIONS]).toHaveLength(2);
     expect(
       report[REPORT_KEYS.TRANSACTIONS].find(
-        (row) => row.transactionId === "T-2026-0001",
+        (row) => row.transactionId === "T-2026-0007",
       ),
     ).toMatchObject({
-      price: "$45.99",
-      rewardPoints: 0,
-    });
-    expect(
-      report[REPORT_KEYS.TRANSACTIONS].find(
-        (row) => row.transactionId === "T-2026-0002",
-      ),
-    ).toMatchObject({
-      price: "$120.00",
-      rewardPoints: 90,
+      name: "Zara Khan",
+      purchaseDate: "Jun-01-2026",
+      price: "$189.99",
+      rewardPoints: 228,
     });
 
-    expect(report[REPORT_KEYS.MONTHLY]).toHaveLength(5);
+    expect(report[REPORT_KEYS.MONTHLY]).toHaveLength(1);
     expect(
-      report[REPORT_KEYS.MONTHLY].find(
-        (row) => row.customerId === "C-101" && row.month === "April",
-      ),
+      report[REPORT_KEYS.MONTHLY].find((row) => row.customerId === "C-103"),
     ).toEqual(
       expect.objectContaining({
-        amountSpent: "$165.99",
-        rewardPoints: 180,
-      }),
-    );
-    expect(
-      report[REPORT_KEYS.MONTHLY].find(
-        (row) => row.customerId === "C-102" && row.month === "May",
-      ),
-    ).toEqual(
-      expect.objectContaining({
-        amountSpent: "$91.99",
-        rewardPoints: 41,
+        name: "Zara Khan",
+        date: "Jun-01-2026",
+        amountSpent: "$254.99",
+        rewardPoints: 358,
       }),
     );
 
-    expect(report[REPORT_KEYS.TOTAL]).toHaveLength(3);
+    expect(report[REPORT_KEYS.TOTAL]).toHaveLength(1);
     expect(
-      report[REPORT_KEYS.TOTAL].find((row) => row.customerId === "C-101"),
+      report[REPORT_KEYS.TOTAL].find((row) => row.customerId === "C-103"),
     ).toEqual(
       expect.objectContaining({
-        customerName: "Jane Doe",
-        amountSpent: "$245.99",
-        rewardPoints: 210,
+        name: "Zara Khan",
+        amountSpent: "$254.99",
+        rewardPoints: 358,
       }),
     );
   });
 
   it("avoids floating point drift when combining monthly spend", () => {
-    const monthlyUsage = buildMonthlyUsage([
-      {
-        customerId: "C-101",
-        name: "John Carter",
-        purchaseDate: "2023-06-02",
-        price: 59.99,
-      },
-      {
-        customerId: "C-101",
-        name: "John Carter",
-        purchaseDate: "2023-06-03",
-        price: 65,
-      },
-    ]);
-
-    expect(monthlyUsage[0].amountSpent).toBe(124.99);
-    expect(createRewardsReport([
+    const transactions = [
       {
         transactionId: "T1",
         customerId: "C-101",
         name: "John Carter",
-        purchaseDate: "2023-06-02",
+        purchaseDate: "2026-06-02",
         productPurchased: "A",
         price: 59.99,
       },
@@ -122,47 +100,65 @@ describe("createRewardsReport", () => {
         transactionId: "T2",
         customerId: "C-101",
         name: "John Carter",
-        purchaseDate: "2023-06-03",
+        purchaseDate: "2026-06-03",
         productPurchased: "B",
         price: 65,
       },
-    ])[REPORT_KEYS.MONTHLY][0].amountSpent).toBe("$124.99");
+    ];
+    const customerNames = buildCustomerNameMap(transactions);
+    const monthlyUsage = buildMonthlyUsage(transactions, customerNames);
+
+    expect(monthlyUsage[0].amountSpent).toBe(124.99);
+    expect(createRewardsReport(transactions)[REPORT_KEYS.MONTHLY][0].amountSpent).toBe(
+      "$124.99",
+    );
   });
 });
 
 describe("buildMonthlyUsage", () => {
-  it("assigns stable ids to monthly rows", () => {
-    const monthlyUsage = buildMonthlyUsage([
+  it("assigns stable ids and a single date field to monthly rows", () => {
+    const transactions = [
       {
         customerId: "C-101",
         name: "Jane",
         purchaseDate: "2026-04-20",
         price: 80,
       },
-    ]);
+    ];
+    const customerNames = buildCustomerNameMap(transactions);
+    const monthlyUsage = buildMonthlyUsage(transactions, customerNames);
 
     expect(monthlyUsage[0].id).toBe("MU-2026-04-C-101");
+    expect(monthlyUsage[0].date).toBe("Apr-01-2026");
   });
 });
 
 describe("buildTotalRewards", () => {
   it("aggregates monthly rows by customer", () => {
-    const totals = buildTotalRewards([
-      {
-        customerId: "C-200",
-        name: "Zara",
-        amountSpent: 60,
-        rewardPoints: 10,
-      },
-      {
-        customerId: "C-100",
-        name: "Adam",
-        amountSpent: 60,
-        rewardPoints: 10,
-      },
+    const customerNames = new Map([
+      ["C-200", "Zara"],
+      ["C-100", "Adam"],
     ]);
+    const totals = buildTotalRewards(
+      [
+        {
+          customerId: "C-200",
+          name: "Zara",
+          amountSpent: 60,
+          rewardPoints: 10,
+        },
+        {
+          customerId: "C-100",
+          name: "Adam",
+          amountSpent: 60,
+          rewardPoints: 10,
+        },
+      ],
+      customerNames,
+    );
 
     expect(totals.map((row) => row.customerId)).toEqual(["C-200", "C-100"]);
+    expect(totals[0].name).toBe("Zara");
   });
 });
 
@@ -175,7 +171,9 @@ describe("filterTransactionsByDate", () => {
     );
 
     expect(filtered).toHaveLength(3);
-    expect(filtered.every((transaction) => transaction.purchaseDate.startsWith("2026-05"))).toBe(true);
+    expect(
+      filtered.every((transaction) => transaction.purchaseDate.startsWith("2026-05")),
+    ).toBe(true);
   });
 });
 
@@ -200,6 +198,19 @@ describe("sortTableRows", () => {
         { customerId: "B", amountSpent: "$45.99" },
       ],
       "amountSpent",
+      1,
+    );
+
+    expect(sorted[0].customerId).toBe("B");
+  });
+
+  it("sorts api-formatted dates chronologically", () => {
+    const sorted = sortTableRows(
+      [
+        { customerId: "A", purchaseDate: "Jun-18-2026" },
+        { customerId: "B", purchaseDate: "Jun-01-2026" },
+      ],
+      "purchaseDate",
       1,
     );
 

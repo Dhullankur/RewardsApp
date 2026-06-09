@@ -28,7 +28,16 @@ Mock API file: `public/transactions.json`
 
 All tests live under `src/test/`.
 
+## Interview prep
+
+See [INTERVIEW.md](./INTERVIEW.md) for questions and answers about this project.
+
 ## Screenshots
 
+### User Monthly Rewards and Total Rewards
 
+![User Monthly Rewards and Total Rewards tables](public/RewardsTable.png)
 
+### Total Rewards and Transactions
+
+![Total Rewards and Transactions tables](public/TransactionsTable.png)

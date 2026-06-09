@@ -3,10 +3,10 @@ import TableSection from "./components/TableSection";
 import DashboardFilters from "./components/DashboardFilters";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
-import { fetchTransactions } from "./api";
+import { fetchTransactions, normalizeTransactions } from "./api";
 import {
   dashboardReducer,
-  INITIAL_DASHBOARD_STATE,
+  initialDashboardState,
 } from "./appReducer";
 import {
   DASHBOARD_COPY,
@@ -22,14 +22,15 @@ import { logger } from "./logger";
 function App() {
   const [state, dispatch] = useReducer(
     dashboardReducer,
-    INITIAL_DASHBOARD_STATE,
+    initialDashboardState,
   );
 
   const loadTransactions = useCallback(async () => {
     dispatch({ type: "LOAD_START" });
 
     try {
-      const transactions = await fetchTransactions();
+      const rawTransactions = await fetchTransactions();
+      const transactions = normalizeTransactions(rawTransactions);
       dispatch({ type: "LOAD_SUCCESS", transactions });
     } catch (error) {
       logger.error("Data loading failed", { message: error.message });

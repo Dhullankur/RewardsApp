@@ -14,8 +14,8 @@ describe("DynamicTable", () => {
       <DynamicTable
         title="Rewards"
         rows={[
-          { id: "MU-1", customerName: "John", rewardPoints: 30 },
-          { id: "MU-2", customerName: "Jane", rewardPoints: 50 },
+          { id: "MU-1", name: "John", rewardPoints: 30 },
+          { id: "MU-2", name: "Jane", rewardPoints: 50 },
         ]}
         hiddenColumns={["id"]}
       />,
@@ -26,15 +26,33 @@ describe("DynamicTable", () => {
     expect(screen.queryByText("Id")).not.toBeInTheDocument();
   });
 
+  it("uses transactionId as the row key when id is absent", () => {
+    const { container } = render(
+      <DynamicTable
+        title="Transactions"
+        rows={[
+          {
+            transactionId: "T-2026-0001",
+            name: "John",
+            rewardPoints: 30,
+          },
+        ]}
+      />,
+    );
+
+    expect(container.querySelector("tbody tr")).toBeInTheDocument();
+    expect(screen.getByText("John")).toBeInTheDocument();
+  });
+
   it("renders headers from row keys", () => {
     render(
       <DynamicTable
         title="Rewards"
-        rows={[{ customerName: "John", rewardPoints: 30 }]}
+        rows={[{ id: "TR-1", name: "John", rewardPoints: 30 }]}
       />,
     );
 
-    expect(screen.getByText("Customer Name")).toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Reward Points")).toBeInTheDocument();
     expect(screen.getByText("John")).toBeInTheDocument();
   });

@@ -19,10 +19,8 @@ export const REPORT_KEYS = {
 export const COLUMN_KEYS = {
   ID: "id",
   CUSTOMER_ID: "customerId",
-  CUSTOMER_NAME: "customerName",
   NAME: "name",
-  MONTH: "month",
-  YEAR: "year",
+  DATE: "date",
   AMOUNT_SPENT: "amountSpent",
   PRICE: "price",
   REWARD_POINTS: "rewardPoints",
@@ -36,7 +34,7 @@ export const TABLE_CONFIG = [
     id: TABLE_IDS.MONTHLY,
     title: "User Monthly Rewards",
     reportKey: REPORT_KEYS.MONTHLY,
-    defaultSortKey: COLUMN_KEYS.YEAR,
+    defaultSortKey: COLUMN_KEYS.DATE,
     hiddenColumns: [COLUMN_KEYS.ID],
   },
   {
@@ -51,7 +49,7 @@ export const TABLE_CONFIG = [
     title: "Transactions",
     reportKey: REPORT_KEYS.TRANSACTIONS,
     defaultSortKey: COLUMN_KEYS.PURCHASE_DATE,
-    hiddenColumns: [],
+    hiddenColumns: [COLUMN_KEYS.ID],
   },
 ];
 
@@ -69,7 +67,8 @@ export const DASHBOARD_COPY = {
     "Monthly and total rewards are calculated from transaction data on the frontend.",
 };
 
-export const MONTH_FORMAT_OPTIONS = { month: "long" };
+export const DATE_RANGE_WARNING =
+  "Date range cannot exceed 90 days. Please select a shorter range.";
 
 export const CURRENCY_SORT_KEYS = [
   COLUMN_KEYS.AMOUNT_SPENT,
@@ -79,5 +78,4 @@ export const CURRENCY_SORT_KEYS = [
 export const NUMERIC_SORT_KEYS = [
   ...CURRENCY_SORT_KEYS,
   COLUMN_KEYS.REWARD_POINTS,
-  COLUMN_KEYS.YEAR,
 ];

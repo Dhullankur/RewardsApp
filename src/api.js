@@ -1,12 +1,24 @@
+import { toIsoDate } from "./dates";
+
 export function centsToDollars(amountInCents) {
   return amountInCents / 100;
 }
 
-function normalizeTransaction(transaction) {
+export function formatCustomerName(firstName = "", lastName = "") {
+  return `${firstName} ${lastName}`.trim();
+}
+
+export function normalizeTransaction(transaction) {
   return {
     ...transaction,
     price: centsToDollars(transaction.price),
+    name: formatCustomerName(transaction.firstName, transaction.lastName),
+    purchaseDate: toIsoDate(transaction.purchaseDate),
   };
+}
+
+export function normalizeTransactions(rawTransactions) {
+  return rawTransactions.map(normalizeTransaction);
 }
 
 export async function fetchTransactions() {
@@ -18,5 +30,5 @@ export async function fetchTransactions() {
 
   const payload = await response.json();
 
-  return payload.transactions.map(normalizeTransaction);
+  return payload.transactions;
 }

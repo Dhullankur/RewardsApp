@@ -4,6 +4,7 @@ import {
   PAGE_SIZE,
   TABLE_CONFIG,
 } from "./constants";
+import { getDefaultDateRange } from "./dates";
 
 const createTableState = (sortKey) => ({
   page: DEFAULT_PAGE,
@@ -20,17 +21,21 @@ const createInitialTableState = () =>
     {},
   );
 
-export const INITIAL_DASHBOARD_STATE = {
+const defaultDateRange = getDefaultDateRange();
+
+export const initialDashboardState = {
   status: "loading",
   errorMessage: "",
   transactions: [],
   filters: {
-    dateFrom: "",
-    dateTo: "",
+    dateFrom: defaultDateRange.dateFrom,
+    dateTo: defaultDateRange.dateTo,
     pageSize: PAGE_SIZE,
   },
   tables: createInitialTableState(),
 };
+
+export const INITIAL_DASHBOARD_STATE = initialDashboardState;
 
 function resetTablePages(tables) {
   return Object.fromEntries(
@@ -39,6 +44,22 @@ function resetTablePages(tables) {
       { ...tableState, page: DEFAULT_PAGE },
     ]),
   );
+}
+
+function createSuccessState(transactions) {
+  const freshDateRange = getDefaultDateRange();
+
+  return {
+    ...initialDashboardState,
+    status: "success",
+    transactions,
+    filters: {
+      ...initialDashboardState.filters,
+      dateFrom: freshDateRange.dateFrom,
+      dateTo: freshDateRange.dateTo,
+    },
+    tables: createInitialTableState(),
+  };
 }
 
 export function dashboardReducer(state, action) {
@@ -51,11 +72,7 @@ export function dashboardReducer(state, action) {
       };
 
     case "LOAD_SUCCESS":
-      return {
-        ...INITIAL_DASHBOARD_STATE,
-        status: "success",
-        transactions: action.transactions,
-      };
+      return createSuccessState(action.transactions);
 
     case "LOAD_ERROR":
       return {
@@ -85,12 +102,19 @@ export function dashboardReducer(state, action) {
         tables: resetTablePages(state.tables),
       };
 
-    case "CLEAR_DATES":
+    case "CLEAR_DATES": {
+      const resetDateRange = getDefaultDateRange();
+
       return {
         ...state,
-        filters: { ...state.filters, dateFrom: "", dateTo: "" },
+        filters: {
+          ...state.filters,
+          dateFrom: resetDateRange.dateFrom,
+          dateTo: resetDateRange.dateTo,
+        },
         tables: resetTablePages(state.tables),
       };
+    }
 
     case "SET_PAGE_SIZE":
       return {

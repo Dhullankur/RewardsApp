@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   dashboardReducer,
-  INITIAL_DASHBOARD_STATE,
+  initialDashboardState,
 } from "../appReducer";
 import { TABLE_IDS } from "../constants";
+import { getDefaultDateRange } from "../dates";
 
 describe("dashboardReducer", () => {
   it("resets filters and table pages after a successful load", () => {
     const dirtyState = {
-      ...INITIAL_DASHBOARD_STATE,
+      ...initialDashboardState,
       status: "success",
       filters: {
         dateFrom: "2026-05-01",
@@ -16,9 +17,9 @@ describe("dashboardReducer", () => {
         pageSize: 20,
       },
       tables: {
-        ...INITIAL_DASHBOARD_STATE.tables,
+        ...initialDashboardState.tables,
         [TABLE_IDS.MONTHLY]: {
-          ...INITIAL_DASHBOARD_STATE.tables[TABLE_IDS.MONTHLY],
+          ...initialDashboardState.tables[TABLE_IDS.MONTHLY],
           page: 3,
         },
       },
@@ -30,18 +31,19 @@ describe("dashboardReducer", () => {
     });
 
     expect(nextState.transactions).toHaveLength(1);
-    expect(nextState.filters).toEqual(INITIAL_DASHBOARD_STATE.filters);
+    expect(nextState.filters.dateFrom).toBe(getDefaultDateRange().dateFrom);
+    expect(nextState.filters.dateTo).toBe(getDefaultDateRange().dateTo);
     expect(nextState.tables[TABLE_IDS.MONTHLY].page).toBe(1);
   });
 
   it("resets table pages when filters change", () => {
     const currentState = {
-      ...INITIAL_DASHBOARD_STATE,
+      ...initialDashboardState,
       status: "success",
       tables: {
-        ...INITIAL_DASHBOARD_STATE.tables,
+        ...initialDashboardState.tables,
         [TABLE_IDS.TRANSACTIONS]: {
-          ...INITIAL_DASHBOARD_STATE.tables[TABLE_IDS.TRANSACTIONS],
+          ...initialDashboardState.tables[TABLE_IDS.TRANSACTIONS],
           page: 4,
         },
       },
@@ -54,5 +56,22 @@ describe("dashboardReducer", () => {
 
     expect(nextState.filters.pageSize).toBe(10);
     expect(nextState.tables[TABLE_IDS.TRANSACTIONS].page).toBe(1);
+  });
+
+  it("restores the default 90-day range when dates are cleared", () => {
+    const currentState = {
+      ...initialDashboardState,
+      status: "success",
+      filters: {
+        ...initialDashboardState.filters,
+        dateFrom: "2026-01-01",
+        dateTo: "2026-06-01",
+      },
+    };
+
+    const nextState = dashboardReducer(currentState, { type: "CLEAR_DATES" });
+
+    expect(nextState.filters.dateFrom).toBe(getDefaultDateRange().dateFrom);
+    expect(nextState.filters.dateTo).toBe(getDefaultDateRange().dateTo);
   });
 });

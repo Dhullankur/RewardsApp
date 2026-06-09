@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
-import { PAGE_SIZE_OPTIONS } from "../constants";
+import { DATE_RANGE_WARNING, PAGE_SIZE_OPTIONS } from "../constants";
+import { getDateRangeDayCount, MAX_DATE_RANGE_DAYS } from "../dates";
 
 function DashboardFilters({
   dateFrom,
@@ -12,6 +13,10 @@ function DashboardFilters({
   onClearDates,
   onPageSizeChange,
 }) {
+  const dayCount = getDateRangeDayCount(dateFrom, dateTo);
+  const showDateRangeWarning =
+    dateFrom && dateTo && dayCount > MAX_DATE_RANGE_DAYS;
+
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
@@ -37,7 +42,7 @@ function DashboardFilters({
         onClick={onClearDates}
         className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
       >
-        Clear dates
+        Reset dates
       </button>
       <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
         Rows per page
@@ -56,6 +61,14 @@ function DashboardFilters({
       <p className="text-xs text-slate-500">
         Showing {filteredCount} of {totalCount} transactions
       </p>
+      {showDateRangeWarning && (
+        <p
+          role="alert"
+          className="w-full rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+        >
+          {DATE_RANGE_WARNING}
+        </p>
+      )}
     </div>
   );
 }
