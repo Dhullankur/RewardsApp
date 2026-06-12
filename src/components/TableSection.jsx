@@ -2,8 +2,8 @@ import { useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import DynamicTable from "./DynamicTable";
 import Pagination from "./Pagination";
-import { tableRowPropType } from "../propTypes";
-import { getPageRows, sortTableRows } from "../rewards";
+import { tableRowPropType } from "../util/propTypes";
+import { getPageRows, sortTableRows } from "../util/rewards";
 
 function TableSection({
   title,

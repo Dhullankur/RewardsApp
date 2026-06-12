@@ -1,4 +1,4 @@
-import { COLUMN_KEYS, CURRENCY_SORT_KEYS } from "./constants";
+import { COLUMN_KEYS, CURRENCY_SORT_KEYS } from "../constants";
 import {
   filterTransactionsToMonth,
   formatApiDate,

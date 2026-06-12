@@ -1,7 +1,7 @@
 import { Component } from "react";
 import PropTypes from "prop-types";
 import ErrorFallback from "./ErrorFallback";
-import { logger } from "../logger";
+import { logger } from "../util/logger";
 
 class ErrorBoundary extends Component {
   constructor(props) {

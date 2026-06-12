@@ -1,4 +1,4 @@
-import { normalizeTransactions } from "../../api";
+import { normalizeTransactions } from "../../util/api";
 
 export const rawMockTransactions = [
   {

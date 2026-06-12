@@ -4,7 +4,7 @@ import {
   PAGE_SIZE,
   TABLE_CONFIG,
 } from "./constants";
-import { getDefaultDateRange } from "./dates";
+import { getDefaultDateRange } from "./util/dates";
 
 const createTableState = (sortKey) => ({
   page: DEFAULT_PAGE,
@@ -46,6 +46,14 @@ function resetTablePages(tables) {
   );
 }
 
+function normalizeDateRange(dateFrom, dateTo) {
+  if (dateFrom && dateTo && dateTo < dateFrom) {
+    return { dateFrom, dateTo: "" };
+  }
+
+  return { dateFrom, dateTo };
+}
+
 function createSuccessState(transactions) {
   const freshDateRange = getDefaultDateRange();
 
@@ -81,26 +89,22 @@ export function dashboardReducer(state, action) {
         errorMessage: action.errorMessage,
       };
 
-    case "SET_DATE_FROM":
+    case "APPLY_DATE_FILTER": {
+      const { dateFrom, dateTo } = normalizeDateRange(
+        action.dateFrom,
+        action.dateTo,
+      );
+
       return {
         ...state,
         filters: {
           ...state.filters,
-          dateFrom: action.value,
-          dateTo:
-            state.filters.dateTo && action.value && state.filters.dateTo < action.value
-              ? ""
-              : state.filters.dateTo,
+          dateFrom,
+          dateTo,
         },
         tables: resetTablePages(state.tables),
       };
-
-    case "SET_DATE_TO":
-      return {
-        ...state,
-        filters: { ...state.filters, dateTo: action.value },
-        tables: resetTablePages(state.tables),
-      };
+    }
 
     case "CLEAR_DATES": {
       const resetDateRange = getDefaultDateRange();

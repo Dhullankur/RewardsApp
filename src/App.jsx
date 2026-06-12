@@ -3,7 +3,7 @@ import TableSection from "./components/TableSection";
 import DashboardFilters from "./components/DashboardFilters";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
-import { fetchTransactions, normalizeTransactions } from "./api";
+import { fetchTransactions, normalizeTransactions } from "./util/api";
 import {
   dashboardReducer,
   initialDashboardState,
@@ -16,8 +16,8 @@ import {
 import {
   createRewardsReport,
   filterTransactionsByDate,
-} from "./rewards";
-import { logger } from "./logger";
+} from "./util/rewards";
+import { logger } from "./util/logger";
 
 function App() {
   const [state, dispatch] = useReducer(
@@ -55,7 +55,7 @@ function App() {
       state.filters.dateFrom,
       state.filters.dateTo,
     );
-  }, [state]);
+  }, [state.status, state.transactions, state.filters.dateFrom, state.filters.dateTo]);
 
   const report = useMemo(() => {
     if (state.status !== "success") {
@@ -86,16 +86,14 @@ function App() {
       {state.status === "success" && (
         <div className="space-y-4">
           <DashboardFilters
+            key={`${state.filters.dateFrom}-${state.filters.dateTo}`}
             dateFrom={state.filters.dateFrom}
             dateTo={state.filters.dateTo}
             pageSize={state.filters.pageSize}
             filteredCount={filteredTransactions.length}
             totalCount={state.transactions.length}
-            onDateFromChange={(value) =>
-              dispatch({ type: "SET_DATE_FROM", value })
-            }
-            onDateToChange={(value) =>
-              dispatch({ type: "SET_DATE_TO", value })
+            onApplyDates={({ dateFrom, dateTo }) =>
+              dispatch({ type: "APPLY_DATE_FILTER", dateFrom, dateTo })
             }
             onClearDates={() => dispatch({ type: "CLEAR_DATES" })}
             onPageSizeChange={(value) =>

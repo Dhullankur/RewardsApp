@@ -4,7 +4,7 @@ import {
   formatCustomerName,
   normalizeTransaction,
   normalizeTransactions,
-} from "../api";
+} from "../util/api";
 
 describe("centsToDollars", () => {
   it("converts integer cents to dollars", () => {

@@ -4,7 +4,7 @@ import {
   initialDashboardState,
 } from "../appReducer";
 import { TABLE_IDS } from "../constants";
-import { getDefaultDateRange } from "../dates";
+import { getDefaultDateRange } from "../util/dates";
 
 describe("dashboardReducer", () => {
   it("resets filters and table pages after a successful load", () => {
@@ -55,6 +55,30 @@ describe("dashboardReducer", () => {
     });
 
     expect(nextState.filters.pageSize).toBe(10);
+    expect(nextState.tables[TABLE_IDS.TRANSACTIONS].page).toBe(1);
+  });
+
+  it("applies date filters and resets table pages", () => {
+    const currentState = {
+      ...initialDashboardState,
+      status: "success",
+      tables: {
+        ...initialDashboardState.tables,
+        [TABLE_IDS.TRANSACTIONS]: {
+          ...initialDashboardState.tables[TABLE_IDS.TRANSACTIONS],
+          page: 4,
+        },
+      },
+    };
+
+    const nextState = dashboardReducer(currentState, {
+      type: "APPLY_DATE_FILTER",
+      dateFrom: "2026-05-01",
+      dateTo: "2026-05-31",
+    });
+
+    expect(nextState.filters.dateFrom).toBe("2026-05-01");
+    expect(nextState.filters.dateTo).toBe("2026-05-31");
     expect(nextState.tables[TABLE_IDS.TRANSACTIONS].page).toBe(1);
   });
 

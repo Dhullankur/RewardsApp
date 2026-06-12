@@ -11,7 +11,7 @@ import {
   formatCurrency,
   getPageRows,
   sortTableRows,
-} from "../rewards";
+} from "../util/rewards";
 
 describe("formatCurrency", () => {
   it("formats amounts with a dollar symbol only", () => {

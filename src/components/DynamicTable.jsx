@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { tableRowPropType } from "../propTypes";
+import { tableRowPropType } from "../util/propTypes";
 
 function getColumns(rows) {
   if (!rows.length) {

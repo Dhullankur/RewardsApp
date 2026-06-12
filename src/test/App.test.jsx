@@ -1,10 +1,10 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import App from "../App";
-import { fetchTransactions } from "../api";
+import { fetchTransactions } from "../util/api";
 import { rawMockTransactions } from "./fixtures/transactions";
 
-vi.mock("../api", async (importOriginal) => {
+vi.mock("../util/api", async (importOriginal) => {
   const actual = await importOriginal();
 
   return {
@@ -13,7 +13,7 @@ vi.mock("../api", async (importOriginal) => {
   };
 });
 
-vi.mock("../logger", () => ({
+vi.mock("../util/logger", () => ({
   logger: {
     error: vi.fn(),
   },
@@ -78,6 +78,26 @@ describe("App", () => {
     expect(screen.getByLabelText("Rows per page")).toHaveValue("5");
   });
 
+  it("does not filter transactions until Apply is clicked", async () => {
+    vi.mocked(fetchTransactions).mockResolvedValue(rawMockTransactions);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Showing 8 of 8 transactions")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Date from"), {
+      target: { value: "2026-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("Date to"), {
+      target: { value: "2026-05-31" },
+    });
+
+    expect(screen.getByText("Showing 8 of 8 transactions")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+  });
+
   it("filters transactions by date range", async () => {
     vi.mocked(fetchTransactions).mockResolvedValue(rawMockTransactions);
 
@@ -93,6 +113,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Date to"), {
       target: { value: "2026-05-31" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(screen.getByText("Showing 3 of 8 transactions")).toBeInTheDocument();
     expect(screen.queryByText("Training Shorts")).not.toBeInTheDocument();
